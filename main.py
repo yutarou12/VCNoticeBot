@@ -1,16 +1,15 @@
 import os
 import traceback
+from datetime import datetime
 
 import discord
 from discord import Embed, Interaction
 from discord.app_commands import AppCommandError
 from discord.ext import commands
-from dotenv import load_dotenv
 
 from libs.Convert import icon_convert
+from libs.Database import Database
 import libs.env as env
-
-load_dotenv()
 
 extensions_list = [f[:-3] for f in os.listdir("./cogs") if f.endswith(".py")]
 
@@ -54,12 +53,20 @@ class MyBot(commands.Bot):
 
 
 bot = MyBot(
-    command_prefix=commands.when_mentioned_or('a.'),
+    command_prefix=commands.when_mentioned_or('vcjoin.'),
     intents=discord.Intents.all(),
     allowed_mentions=discord.AllowedMentions(replied_user=False, everyone=False),
     help_command=None
 )
-bot.vc_status = {}
+bot.db = Database()
+
+
+@bot.listen()
+async def on_ready():
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f'{now} | 起動しました！(\'◇\')ゞ')
+    print(f"{bot.user.id} | {bot.user.name}")
+
 
 if __name__ == '__main__':
     bot.run(env.DISCORD_BOT_TOKEN)

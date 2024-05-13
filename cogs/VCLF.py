@@ -9,7 +9,7 @@ from discord.ext import commands
 class VCLF(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.vc_status = bot.vc_status
+        self.db = self.bot.db
 
     @app_commands.command(name='参加')
     @app_commands.guild_only()
@@ -18,10 +18,10 @@ class VCLF(commands.Cog):
 
         if not interaction.user.voice:
             return await interaction.response.send_message('VCに参加してからコマンドを実行してください。', ephemeral=True)
-
         await interaction.guild.change_voice_state(channel=interaction.user.voice.channel, self_deaf=True)
 
-        self.vc_status[interaction.guild.id] = {"ch": interaction.channel.id, "vc": interaction.user.voice.channel.id}
+        await self.db.set_vc_setting(interaction.guild.id, interaction.channel.id, interaction.user.voice.channel.id)
+
         return await interaction.response.send_message('参加しました。', ephemeral=True)
 
     @app_commands.command(name='退出')
@@ -37,22 +37,28 @@ class VCLF(commands.Cog):
         if member.bot:
             return
 
-        if not self.vc_status.get(member.guild.id):
+        if not await self.db.get_vc_setting(member.guild.id):
             return
 
-        vc_ch = member.guild.get_channel(self.vc_status.get(member.guild.id).get("vc"))
+        vc_ch_id = await self.db.get_vc_setting(member.guild.id).get("vc_ch_id")
+        text_ch_id = await self.db.get_vc_setting(member.guild.id).get("text_ch_id")
+        vc_ch = member.guild.get_channel(vc_ch_id)
 
         if before.channel is None and member in after.channel.members and after.channel == vc_ch:
-            ch = member.guild.get_channel(self.vc_status.get(member.guild.id).get("ch"))
+            ch = member.guild.get_channel(text_ch_id)
             if not ch:
                 return
             await ch.send(f'> 📥{member.mention} がVCに参加しました。 <t:{math.floor(datetime.datetime.utcnow().timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
 
         if before.channel == vc_ch and after.channel is None:
-            ch = member.guild.get_channel(self.vc_status.get(member.guild.id).get("ch"))
-            if not ch:
-                return
-            await ch.send(f'> 📤{member.mention} がVCから退出しました。 <t:{math.floor(datetime.datetime.utcnow().timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
+            vc_ch: discord.VoiceChannel = vc_ch
+            if len(vc_ch.members) == 1:
+                return await member.guild.change_voice_state(channel=None)
+            else:
+                ch = member.guild.get_channel(text_ch_id)
+                if not ch:
+                    return
+                await ch.send(f'> 📤{member.mention} がVCから退出しました。 <t:{math.floor(datetime.datetime.utcnow().timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
 
 
 async def setup(bot):
