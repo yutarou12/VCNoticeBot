@@ -1,5 +1,3 @@
-import os
-import hashlib
 import logging
 import asyncpg
 from functools import wraps
@@ -41,14 +39,17 @@ class ProductionDatabase:
 
     @check_connection
     async def set_vc_setting(self, guild_id: int, text_ch_id: int, vc_ch_id: int):
-        async with self.pool.acquire() as con:
-            await con.execute('INSERT INTO vc_setting (guild_id, text_ch_id, vc_ch_id) VALUES ($1, $2, $3)', guild_id, text_ch_id, vc_ch_id)
+        await self.execute(f'INSERT INTO vc_setting (guild_id, text_ch_id, vc_ch_id) VALUES ({guild_id}, {text_ch_id}, {vc_ch_id})')
 
     @check_connection
     async def get_vc_setting(self, guild_id: int):
-        async with self.pool.acquire() as con:
-            data = await con.fetch('SELECT * FROM vc_setting WHERE guild_id = $1', guild_id)
+        data = await self.fetch(f'SELECT * FROM vc_setting WHERE guild_id = {guild_id}')
         return data
+
+    @check_connection
+    async def del_vc_setting(self, guild_id: int):
+        async with self.pool.acquire() as con:
+            await con.execute('DELETE FROM vc_setting WHERE guild_id = $1', guild_id)
 
 
 class DebugDatabase(ProductionDatabase):

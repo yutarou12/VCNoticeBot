@@ -30,6 +30,7 @@ class VCLF(commands.Cog):
         """退出する"""
 
         await interaction.guild.change_voice_state(channel=None)
+        await self.db.del_vc_setting(interaction.guild.id)
         return await interaction.response.send_message('退出しました。', ephemeral=True)
 
     @commands.Cog.listener()
