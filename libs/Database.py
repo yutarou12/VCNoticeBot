@@ -54,7 +54,6 @@ class ProductionDatabase:
 class DebugDatabase(ProductionDatabase):
     def __init__(self):
         super().__init__()
-        self.pool = None
 
     async def execute(self, sql):
         logging.info(f"executing sql: {sql}")
