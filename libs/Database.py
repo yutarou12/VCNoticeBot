@@ -16,9 +16,9 @@ class ProductionDatabase:
 
         async with self.pool.acquire() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS vc_setting (guild_id bigint NOT NULL PRIMARY KEY, text_ch_id bigint NOT NULL, vc_ch_id bigint NOT NULL);")
+                "CREATE TABLE IF NOT EXISTS vc_setting (guild_id bigint NOT NULL PRIMARY KEY, text_ch_id bigint NOT NULL, vc_ch_id bigint NOT NULL)")
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notice_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_text);")
+                "CREATE TABLE IF NOT EXISTS notice_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_text text)")
 
     def check_connection(func):
         @wraps(func)
