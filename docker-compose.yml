@@ -1,0 +1,39 @@
+services:
+  bot:
+    restart: always
+    build:
+      context: "./"
+      dockerfile: "Dockerfile"
+    environment:
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      TRACEBACK_CHANNEL_ID: ${TRACEBACK_CHANNEL_ID}
+      ERROR_CHANNEL_ID: ${ERROR_CHANNEL_ID}
+      POSTGRESQL_USER: ${POSTGRESQL_USER}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_HOST_NAME: POSTGRESQL_HOST_NAME
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT}
+      POSTGRESQL_DATABASE_NAME: ${POSTGRESQL_DATABASE_NAME}
+      DEBUG: ${DEBUG}
+    container_name: "bot"
+    volumes:
+      - ./:/app/
+    working_dir: "/app/"
+    tty: true
+    networks:
+      - vc-notice-bot-net
+  db:
+    container_name: "db"
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${POSTGRESQL_USER}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - ./postgres/data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    networks:
+      - vc-notice-bot-net
+networks:
+  vc-notice-bot-net:
+    driver: bridge
