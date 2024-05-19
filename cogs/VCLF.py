@@ -1,5 +1,6 @@
 import datetime
 import math
+import asyncpg
 
 import discord
 from discord import app_commands
@@ -30,19 +31,29 @@ class VCLF(commands.Cog):
         """退出する"""
 
         await interaction.guild.change_voice_state(channel=None)
-        await self.db.del_vc_setting(interaction.guild.id)
+        try:
+            await self.db.del_vc_setting(interaction.guild.id)
+        except asyncpg.exceptions.UniqueViolationError:
+            pass
         return await interaction.response.send_message('退出しました。', ephemeral=True)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
+        if member.id == self.bot.user.id and after.channel is None:
+            return await self.db.del_vc_setting(member.guild.id)
+
         if member.bot:
             return
 
         if not await self.db.get_vc_setting(member.guild.id):
             return
 
-        vc_ch_id = await self.db.get_vc_setting(member.guild.id).get("vc_ch_id")
-        text_ch_id = await self.db.get_vc_setting(member.guild.id).get("text_ch_id")
+        guild_data = await self.db.get_vc_setting(member.guild.id)
+        if not guild_data:
+            return
+
+        vc_ch_id = guild_data.get('vc_ch_id')
+        text_ch_id = guild_data.get('text_ch_id')
         vc_ch = member.guild.get_channel(vc_ch_id)
 
         if before.channel is None and member in after.channel.members and after.channel == vc_ch:
@@ -54,6 +65,7 @@ class VCLF(commands.Cog):
         if before.channel == vc_ch and after.channel is None:
             vc_ch: discord.VoiceChannel = vc_ch
             if len(vc_ch.members) == 1:
+                await self.db.del_vc_setting(member.guild.id)
                 return await member.guild.change_voice_state(channel=None)
             else:
                 ch = member.guild.get_channel(text_ch_id)

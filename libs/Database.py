@@ -18,10 +18,12 @@ class ProductionDatabase:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS notice_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_text text)")
 
+        return self.pool
+
     def check_connection(func):
         @wraps(func)
         async def inner(self, *args, **kwargs):
-            self.pool = self.pool or await self.setup()
+            self.pool = self.pool or (await self.setup())
             return await func(self, *args, **kwargs)
 
         return inner
@@ -44,7 +46,9 @@ class ProductionDatabase:
     @check_connection
     async def get_vc_setting(self, guild_id: int):
         data = await self.fetch(f'SELECT * FROM vc_setting WHERE guild_id = {guild_id}')
-        return data
+        if not data:
+            return None
+        return data[0]
 
     @check_connection
     async def del_vc_setting(self, guild_id: int):
