@@ -16,7 +16,7 @@ class ProductionDatabase:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS vc_setting (guild_id bigint NOT NULL PRIMARY KEY, text_ch_id bigint NOT NULL, vc_ch_id bigint NOT NULL)")
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notice_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_text text)")
+                "CREATE TABLE IF NOT EXISTS notice_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_vc BOOLEAN NOT NULL)")
 
         return self.pool
 
@@ -54,6 +54,26 @@ class ProductionDatabase:
     async def del_vc_setting(self, guild_id: int):
         async with self.pool.acquire() as con:
             await con.execute('DELETE FROM vc_setting WHERE guild_id = $1', guild_id)
+
+    @check_connection
+    async def set_notice_setting(self, guild_id: int, notice_vc: bool):
+        await self.execute(f'INSERT INTO notice_setting (guild_id, notice_vc) VALUES ({guild_id}, {notice_vc})')
+
+    @check_connection
+    async def get_notice_setting(self, guild_id: int):
+        data = await self.fetch(f'SELECT * FROM notice_setting WHERE guild_id = {guild_id}')
+        if not data:
+            return None
+        return data[0]
+
+    @check_connection
+    async def del_notice_setting(self, guild_id: int):
+        async with self.pool.acquire() as con:
+            await con.execute('DELETE FROM notice_setting WHERE guild_id = $1', guild_id)
+
+    @check_connection
+    async def update_notice_setting(self, guild_id: int, notice_vc: bool):
+        await self.execute(f'UPDATE notice_setting SET notice_vc = {notice_vc} WHERE guild_id = {guild_id}')
 
 
 class DebugDatabase(ProductionDatabase):
