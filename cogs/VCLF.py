@@ -43,14 +43,14 @@ class VCLF(commands.Cog):
             return await self.db.del_vc_setting(member.guild.id)
 
         if member.bot:
-            return
+            return None
 
         if not await self.db.get_vc_setting(member.guild.id):
-            return
+            return None
 
         guild_data = await self.db.get_vc_setting(member.guild.id)
         if not guild_data:
-            return
+            return None
 
         vc_ch_id = guild_data.get('vc_ch_id')
         text_ch_id = guild_data.get('text_ch_id')
@@ -59,7 +59,7 @@ class VCLF(commands.Cog):
         if before.channel is None and member in after.channel.members and after.channel == vc_ch:
             ch = member.guild.get_channel(text_ch_id)
             if not ch:
-                return
+                return None
             await ch.send(f'> 📥{member.mention} がVCに参加しました。 <t:{math.floor(datetime.datetime.utcnow().timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
 
         if before.channel == vc_ch and after.channel is None:
@@ -70,7 +70,7 @@ class VCLF(commands.Cog):
             else:
                 ch = member.guild.get_channel(text_ch_id)
                 if not ch:
-                    return
+                    return None
                 await ch.send(f'> 📤{member.mention} がVCから退出しました。 <t:{math.floor(datetime.datetime.utcnow().timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
 
 
