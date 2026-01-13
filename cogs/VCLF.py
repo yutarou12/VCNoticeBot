@@ -40,7 +40,6 @@ class VCLF(commands.Cog):
                 ch = after.channel
             else:
                 vc_notice_id = guild_data.get('single_channel_id')
-                print(vc_notice_id)
                 if not vc_notice_id:
                     return None
                 ch = member.guild.get_channel(vc_notice_id)
@@ -55,7 +54,6 @@ class VCLF(commands.Cog):
                 return None
             if channel_type == "vc_text":
                 ch = before.channel
-                print(ch)
             else:
                 vc_notice_id = guild_data.get('single_channel_id')
                 if not vc_notice_id:

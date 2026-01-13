@@ -60,6 +60,10 @@ class NoticeFunctionBoolButton(ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         # 機能の有効化/無効化切替処理
+        data = await self.db.get_notice_channel_type(interaction.guild.id)
+        if not data:
+            # 通知先チャンネル設定が未設定の場合、デフォルト値を設定
+            await self.db.set_notice_channel_type(interaction.guild.id, 'vc_text')
         new = await self.db.toggle_notice_function(interaction.guild.id)
         view = SettingView(new, self.db)
         await interaction.response.edit_message(view=view)
