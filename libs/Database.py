@@ -22,6 +22,8 @@ class ProductionDatabase:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS notice_channel_type_setting (guild_id bigint NOT NULL PRIMARY KEY, channel_type TEXT NOT NULL, single_channel_id bigint)")
             await conn.execute(
+                "CREATE TABLE IF NOT EXISTS notice_role_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_role BOOLEAN NOT NULL, notice_role_id bigint NOT NULL)")
+            await conn.execute(
                 "CREATE TABLE IF NOT EXISTS notice_function_bool (guild_id bigint NOT NULL PRIMARY KEY)")
 
         return self.pool
@@ -179,6 +181,31 @@ class ProductionDatabase:
         else:
             await self.execute(f'UPDATE notice_channel_type_setting SET single_channel_id = {single_channel_id} WHERE guild_id = {guild_id}')
         new = await self.get_notice_channel_type(guild_id)
+        return new
+
+    @check_connection
+    async def get_notice_role_setting(self, guild_id: int):
+        data = await self.fetch(f'SELECT * FROM notice_role_setting WHERE guild_id = {guild_id}')
+        if not data:
+            return None
+        return data[0]
+
+    @check_connection
+    async def get_notice_role_bool(self, guild_id: int):
+        data = await self.fetch(f'SELECT * FROM notice_role_setting WHERE guild_id = {guild_id}')
+        if not data:
+            return None
+        return data[0].get('notice_role')
+
+    @check_connection
+    async def set_notice_role_setting(self, guild_id: int, role_setting: bool, role_id: int):
+        data = await self.get_notice_role_setting(guild_id)
+        if data is None:
+            await self.execute(f'INSERT INTO notice_role_setting (guild_id, notice_role, notice_role_id) VALUES ({guild_id}, {role_setting}, {role_id})')
+        else:
+            await self.execute(f'UPDATE notice_role_setting SET notice_role = {role_setting}, notice_role_id = {role_id} WHERE guild_id = {guild_id}')
+
+        new = await self.get_notice_role_setting(guild_id)
         return new
 
 
