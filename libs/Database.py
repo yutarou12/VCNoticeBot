@@ -22,7 +22,7 @@ class ProductionDatabase:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS notice_channel_type_setting (guild_id bigint NOT NULL PRIMARY KEY, channel_type TEXT NOT NULL, single_channel_id bigint)")
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notice_role_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_role BOOLEAN NOT NULL, notice_role_id bigint NOT NULL)")
+                "CREATE TABLE IF NOT EXISTS notice_role_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_role BOOLEAN NOT NULL, notice_role_id bigint)")
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS notice_function_bool (guild_id bigint NOT NULL PRIMARY KEY)")
 
@@ -198,12 +198,23 @@ class ProductionDatabase:
         return data[0].get('notice_role')
 
     @check_connection
-    async def set_notice_role_setting(self, guild_id: int, role_setting: bool, role_id: int):
+    async def set_notice_role_setting(self, guild_id: int, role_id: int):
         data = await self.get_notice_role_setting(guild_id)
         if data is None:
-            await self.execute(f'INSERT INTO notice_role_setting (guild_id, notice_role, notice_role_id) VALUES ({guild_id}, {role_setting}, {role_id})')
+            await self.execute(f'INSERT INTO notice_role_setting (guild_id, notice_role, notice_role_id) VALUES ({guild_id}, {False}, {role_id})')
         else:
-            await self.execute(f'UPDATE notice_role_setting SET notice_role = {role_setting}, notice_role_id = {role_id} WHERE guild_id = {guild_id}')
+            await self.execute(f'UPDATE notice_role_setting SET notice_role_id = {role_id} WHERE guild_id = {guild_id}')
+
+        new = await self.get_notice_role_setting(guild_id)
+        return new
+
+    @check_connection
+    async def set_notice_role_bool(self, guild_id: int, role_bool: bool):
+        data = await self.get_notice_role_setting(guild_id)
+        if data is None:
+            await self.execute(f'INSERT INTO notice_role_setting (guild_id, notice_role, notice_role_id) VALUES ({guild_id}, {role_bool}, {0})')
+        else:
+            await self.execute(f'UPDATE notice_role_setting SET notice_role = {role_bool} WHERE guild_id = {guild_id}')
 
         new = await self.get_notice_role_setting(guild_id)
         return new
