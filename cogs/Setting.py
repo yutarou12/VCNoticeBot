@@ -46,6 +46,10 @@ class SettingView(ui.LayoutView):
                 ui.TextDisplay(content='➌ 通知する種類の設定'),
                 accessory=NoticeTypeSetButton(db)
             ),
+            ui.Section(
+                ui.TextDisplay(content='❹ メンションするロールの設定'),
+                accessory=NoticeRoleSetButton(db)
+            ),
             ui.Separator(),
             accent_color=Colour.green(),
         )
@@ -241,6 +245,66 @@ class VcNoticeView(View):
         await interaction.response.edit_message('キャンセルしました。', embed=None, ephemeral=True)
         self.value = None
         self.stop()
+
+
+class NoticeRoleSetButton(ui.Button):
+    def __init__(self, db):
+        self.db = db
+        super().__init__(label='❹', style=ButtonStyle.primary)
+
+    async def callback(self, interaction: discord.Interaction):
+        data = await self.db.get_all_notice_type_setting(interaction.guild.id)
+        view = NoticeRoleView(data, self.db)
+        await interaction.response.edit_message(view=view)
+
+
+class NoticeRoleView(ui.LayoutView):
+    row = ui.ActionRow()
+    row.add_item(BackToSettingButton())
+
+    def __init__(self, data, db):
+        super().__init__()
+
+        container = ui.Container(
+            ui.TextDisplay(content="# 通知ロール設定"),
+            ui.TextDisplay(content='### メンションするロールを設定します。'),
+            ui.Separator(),
+            ui.TextDisplay(content=f'通知ロール'),
+            NoticeRoleActionRow(NoticeRoleTypeSelect(data, db)),
+            accent_color=Colour.green(),
+        )
+        self.add_item(container)
+        self.remove_item(self.row)
+        self.add_item(self.row)
+
+
+class NoticeRoleActionRow(ui.ActionRow):
+    def __init__(self, select: ui.Select | ui.RoleSelect):
+        super().__init__()
+        self.add_item(select)
+
+
+class NoticeRoleTypeSelect(ui.RoleSelect):
+    def __init__(self, data, db):
+        self.db = db
+        super().__init__(
+            placeholder='メンションするロールを選択してください。',
+            custom_id='notice_role_select',
+            min_values=1,
+            max_values=1,
+            disabled=False if data and data.get('channel_type') == 'single' else True,
+            default_values=[Object(data.get('single_channel_id'))] if data and data.get(
+                'channel_type') == 'single' and data.get('single_channel_id') else None,
+
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        selected_role = self.values[0]
+        await self.db.set_notice_role_setting(interaction.guild.id, selected_role.id)
+
+        data = await self.db.get_notice_role_setting(interaction.guild.id)
+        view = NoticeRoleView(data, self.db)
+        await interaction.response.edit_message(view=view)
 
 
 async def setup(bot):
