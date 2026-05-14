@@ -47,7 +47,7 @@ class SettingView(ui.LayoutView):
                 accessory=NoticeTypeSetButton(db)
             ),
             ui.Section(
-                ui.TextDisplay(content='❹ メンションするロールの設定'),
+                ui.TextDisplay(content='➍ メンションするロールの設定'),
                 accessory=NoticeRoleSetButton(db)
             ),
             ui.Separator(),
@@ -250,10 +250,10 @@ class VcNoticeView(View):
 class NoticeRoleSetButton(ui.Button):
     def __init__(self, db):
         self.db = db
-        super().__init__(label='❹', style=ButtonStyle.primary)
+        super().__init__(label='④', style=ButtonStyle.primary)
 
     async def callback(self, interaction: discord.Interaction):
-        data = await self.db.get_all_notice_type_setting(interaction.guild.id)
+        data = await self.db.get_notice_role_setting(interaction.guild.id)
         view = NoticeRoleView(data, self.db)
         await interaction.response.edit_message(view=view)
 
@@ -269,6 +269,9 @@ class NoticeRoleView(ui.LayoutView):
             ui.TextDisplay(content="# 通知ロール設定"),
             ui.TextDisplay(content='### メンションするロールを設定します。'),
             ui.Separator(),
+            ui.TextDisplay(content=f'設定の有効/無効'),
+            NoticeRoleBoolActionRow(NoticeRoleBoolButton(data, db)),
+            ui.Separator(),
             ui.TextDisplay(content=f'通知ロール'),
             NoticeRoleActionRow(NoticeRoleTypeSelect(data, db)),
             accent_color=Colour.green(),
@@ -279,9 +282,35 @@ class NoticeRoleView(ui.LayoutView):
 
 
 class NoticeRoleActionRow(ui.ActionRow):
-    def __init__(self, select: ui.Select | ui.RoleSelect):
+    def __init__(self, select):
         super().__init__()
         self.add_item(select)
+
+class NoticeRoleBoolActionRow(ui.ActionRow):
+    def __init__(self, button):
+        super().__init__()
+        self.add_item(button)
+
+
+class NoticeRoleBoolButton(ui.Button):
+    def __init__(self, data, db):
+        self.db = db
+        super().__init__(
+            style=discord.ButtonStyle.green if data and data.get('notice_role') else discord.ButtonStyle.gray,
+            label="有効" if data and data.get('notice_role') else "無効"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        data = await self.db.get_notice_role_setting(interaction.guild.id)
+
+        if not data:
+            await self.db.set_notice_role_bool(interaction.guild.id, True)
+        else:
+            await self.db.set_notice_role_bool(interaction.guild.id, False if data and data.get('notice_role') else True)
+
+        data = await self.db.get_notice_role_setting(interaction.guild.id)
+        view = NoticeRoleView(data, self.db)
+        await interaction.response.edit_message(view=view)
 
 
 class NoticeRoleTypeSelect(ui.RoleSelect):
@@ -292,10 +321,8 @@ class NoticeRoleTypeSelect(ui.RoleSelect):
             custom_id='notice_role_select',
             min_values=1,
             max_values=1,
-            disabled=False if data and data.get('channel_type') == 'single' else True,
-            default_values=[Object(data.get('single_channel_id'))] if data and data.get(
-                'channel_type') == 'single' and data.get('single_channel_id') else None,
-
+            disabled=False if data and data.get('notice_role') else True,
+            default_values=[Object(data.get('notice_role_id'))] if data and data.get('notice_role_id') else None,
         )
 
     async def callback(self, interaction: discord.Interaction):
