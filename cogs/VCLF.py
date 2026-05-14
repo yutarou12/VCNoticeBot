@@ -45,7 +45,18 @@ class VCLF(commands.Cog):
                 ch = member.guild.get_channel(vc_notice_id)
             if not ch:
                 return None
-            return await ch.send(f'> 📥 {member.mention} が {after.channel.mention} に参加しました。 <t:{math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
+
+            notice_role_bool = await self.db.get_notice_role_bool(member.guild.id)
+            if not notice_role_bool:
+                return await ch.send(f'> 📥 {member.mention} が {after.channel.mention} に参加しました。 <t:{math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
+            else:
+                notice_role_data = await self.db.get_notice_role_setting(member.guild.id)
+                notice_role_id = notice_role_data.get('notice_role_id')
+                notice_role: discord.Role = member.guild.get_role(notice_role_id)
+                if not notice_role:
+                    return await ch.send(f'> 📥 {member.mention} が {after.channel.mention} に参加しました。 <t:{math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
+                else:
+                    return await ch.send(f'{notice_role.mention}\n> 📥 {member.mention} が {after.channel.mention} に参加しました。 <t:{math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
 
         # VC退出時
         elif before.channel is not None and after.channel is None:
@@ -61,7 +72,17 @@ class VCLF(commands.Cog):
                 ch = member.guild.get_channel(vc_notice_id)
             if not ch:
                 return None
-            return await ch.send(f'> 📤 {member.mention} が {before.channel.mention} から退出しました。 <t:{math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
+            notice_role_bool = await self.db.get_notice_role_bool(member.guild.id)
+            if not notice_role_bool:
+                return await ch.send(f'> 📤 {member.mention} が {before.channel.mention} から退出しました。 <t:{math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
+            else:
+                notice_role_data = await self.db.get_notice_role_setting(member.guild.id)
+                notice_role_id = notice_role_data.get('notice_role_id')
+                notice_role: discord.Role = member.guild.get_role(notice_role_id)
+                if not notice_role:
+                    return await ch.send(f'> 📤 {member.mention} が {before.channel.mention} から退出しました。 <t:{math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
+                else:
+                    return await ch.send(f'{notice_role.mention}\n> 📤 {member.mention} が {before.channel.mention} から退出しました。 <t:{math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
 
         return None
 
