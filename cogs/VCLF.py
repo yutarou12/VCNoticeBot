@@ -14,8 +14,6 @@ class VCLF(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after: discord.VoiceState):
-        if member.id == self.bot.user.id and after.channel is None:
-            return await self.db.del_vc_setting(member.guild.id)
 
         if member.bot:
             return None
