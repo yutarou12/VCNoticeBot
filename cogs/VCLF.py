@@ -17,8 +17,8 @@ class VCLF(commands.Cog):
         if member.bot:
             return None
 
-        guild_bool = await self.db.get_notice_function(member.guild.id)
-        if not guild_bool:
+        # 設定の有効/無効の取得
+        if not await self.db.get_notice_function(member.guild.id):
             return None
 
         # 送信チャンネルの種類の取得
@@ -28,11 +28,20 @@ class VCLF(commands.Cog):
         else:
             channel_type = guild_data.get('channel_type')
 
+        # 休止チャンネルの取得
+        if member.guild.afk_channel and member.guild.afk_channel == after.channel:
+            return None
+
         # VC入室時
         if after.channel is not None and before.channel is None:
+            # 休止チャンネルに入室の場合通知しない
+            if member.guild.afk_channel and member.guild.afk_channel == after.channel:
+                return None
+
             join_bool = await self.db.get_notice_join_bool(member.guild.id)
             if not join_bool:
                 return None
+
             if channel_type == "vc_text":
                 ch = after.channel
             else:
@@ -40,6 +49,7 @@ class VCLF(commands.Cog):
                 if not vc_notice_id:
                     return None
                 ch = member.guild.get_channel(vc_notice_id)
+
             if not ch:
                 return None
 
@@ -57,9 +67,14 @@ class VCLF(commands.Cog):
 
         # VC退出時
         elif before.channel is not None and after.channel is None:
+            # 休止チャンネルから退室の場合通知しない
+            if member.guild.afk_channel and member.guild.afk_channel == before.channel:
+                return None
+
             leave_bool = await self.db.get_notice_leave_bool(member.guild.id)
             if not leave_bool:
                 return None
+
             if channel_type == "vc_text":
                 ch = before.channel
             else:
@@ -67,8 +82,10 @@ class VCLF(commands.Cog):
                 if not vc_notice_id:
                     return None
                 ch = member.guild.get_channel(vc_notice_id)
+
             if not ch:
                 return None
+
             notice_role_bool = await self.db.get_notice_role_bool(member.guild.id)
             if not notice_role_bool:
                 return await ch.send(f'> 📤 {member.mention} が {before.channel.mention} から退出しました。 <t:{math.floor(datetime.datetime.now(datetime.timezone.utc).timestamp())}:T>', allowed_mentions=discord.AllowedMentions(users=False))
