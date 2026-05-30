@@ -158,7 +158,6 @@ class NoticeChannelSelect(ui.ChannelSelect):
             disabled=False if data and data.get('channel_type') == 'single' else True,
             default_values=[Object(data.get('single_channel_id'))] if data and data.get(
                 'channel_type') == 'single' and data.get('single_channel_id') else None,
-
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -225,30 +224,6 @@ class VcNoticeToggleButton(ui.Button):
 
         view = NoticeTypeView(new, self.db)
         await interaction.response.edit_message(view=view)
-
-
-class VcNoticeView(View):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.value = None
-
-    @discord.ui.button(label='通知ON', style=discord.ButtonStyle.green)
-    async def confirm_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.edit_message(content='通知をオンにしました。', embed=None, view=None)
-        self.value = True
-        self.stop()
-
-    @discord.ui.button(label='通知OFF', style=discord.ButtonStyle.gray)
-    async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.edit_message('通知をオフにしました。', embed=None, ephemeral=True)
-        self.value = False
-        self.stop()
-
-    @discord.ui.button(label='キャンセル', style=discord.ButtonStyle.gray)
-    async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.edit_message('キャンセルしました。', embed=None, ephemeral=True)
-        self.value = None
-        self.stop()
 
 
 class NoticeRoleSetButton(ui.Button):
