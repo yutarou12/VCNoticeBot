@@ -13,18 +13,25 @@ class ProductionDatabase:
         self.pool = await asyncpg.create_pool(f"postgresql://{env.POSTGRESQL_USER}:{env.POSTGRESQL_PASSWORD}@{env.POSTGRESQL_HOST_NAME}:{env.POSTGRESQL_PORT}/{env.POSTGRESQL_DATABASE_NAME}")
 
         async with self.pool.acquire() as conn:
+            # 全体機能の有効/無効
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS vc_setting (guild_id bigint NOT NULL PRIMARY KEY, text_ch_id bigint NOT NULL, vc_ch_id bigint NOT NULL)")
+                "CREATE TABLE IF NOT EXISTS notice_function_bool (guild_id bigint NOT NULL PRIMARY KEY)"
+            )
+            # 入室時の通知 | テーブルが存在する：機能が有効、存在しない：機能が無効
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notice_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_vc BOOLEAN NOT NULL)")
+                "CREATE TABLE IF NOT EXISTS notice_join_bool (guild_id bigint NOT NULL PRIMARY KEY)"
+            )
+            # 退室時の通知 | テーブルが存在する：機能が有効、存在しない：機能が無効
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notice_type_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_join BOOLEAN NOT NULL, notice_leave BOOLEAN NOT NULL)")
+                "CREATE TABLE IF NOT EXISTS notice_leave_bool (guild_id bigint NOT NULL PRIMARY KEY)"
+            )
+            # 通知するチャンネルのタイプ(指定orVCテキストチャンネル) | テーブルが存在しない：VCテキストチャンネル
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notice_channel_type_setting (guild_id bigint NOT NULL PRIMARY KEY, channel_type TEXT NOT NULL, single_channel_id bigint)")
+                "CREATE TABLE IF NOT EXISTS notice_channel_type_setting (guild_id bigint NOT NULL PRIMARY KEY, single_channel_id bigint)"
+            )
+            # メンションするロールの設定 | テーブルが存在しない：機能オフ
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notice_role_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_role BOOLEAN NOT NULL, notice_role_id bigint)")
-            await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notice_function_bool (guild_id bigint NOT NULL PRIMARY KEY)")
+                "CREATE TABLE IF NOT EXISTS notice_role_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_role_id bigint)")
 
         return self.pool
 
