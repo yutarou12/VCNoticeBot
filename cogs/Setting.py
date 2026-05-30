@@ -28,14 +28,14 @@ class BackToSettingButton(ui.Button):
 
 class SettingView(ui.LayoutView):
 
-    def __init__(self, data, db):
+    def __init__(self, function_data, db):
         super().__init__()
         container = ui.Container(
             ui.TextDisplay(content="# VC入退出通知-設定"),
             ui.TextDisplay(content='### VC入退出通知の設定を行います。\n以下の各項目から設定を行ってください。'),
             ui.Separator(),
             ui.Section(
-                ui.TextDisplay(content=f'➊ 本機能 - **{"有効" if data else "無効"}**'),
+                ui.TextDisplay(content=f'➊ 本機能 - **{"有効" if function_data else "無効"}**'),
                 accessory=NoticeFunctionBoolButton(db)
             ),
             ui.Section(
