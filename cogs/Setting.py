@@ -51,6 +51,10 @@ class SettingView(ui.LayoutView):
                 accessory=NoticeRoleSetButton(db)
             ),
             ui.Separator(),
+            ui.Section(
+                ui.TextDisplay(content='⚠️ 設定の初期化'),
+                accessory=NoticeSettingResetButtonOnView(db)
+            ),
             accent_color=Colour.green(),
         )
 
@@ -332,6 +336,59 @@ class NoticeRoleTypeSelect(ui.RoleSelect):
         data = await self.db.get_notice_role_setting(interaction.guild.id)
         view = NoticeRoleView(data, self.db)
         await interaction.response.edit_message(view=view)
+
+
+class NoticeSettingResetButtonOnView(ui.Button):
+    def __init__(self, db):
+        self.db = db
+        super().__init__(label='初期化', style=ButtonStyle.danger)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = NoticeSettingResetView(db=self.db)
+        await interaction.response.edit_message(view=view)
+
+class NoticeSettingResetButton:
+    class Excute(ui.Button):
+        def __init__(self, db):
+            self.db = db
+            super().__init__(label='実行', style=ButtonStyle.danger)
+
+        async def callback(self, interaction: discord.Interaction):
+            try:
+                await self.db.reset_notice_setting(interaction.guild.id)
+                await interaction.response.send_message(content='設定を初期化しました。', ephemeral=True)
+                self.view.stop()
+            except Exception as e:
+                await interaction.response.send_message(
+                    content=f'初期化に失敗しました。\n[公式サーバー](https://discord.gg/k5Feum44gE)までお問い合わせください。',
+                    ephemeral=True)
+                self.view.stop()
+
+    class Cancel(ui.Button):
+        def __init__(self):
+            super().__init__(label='キャンセル', style=ButtonStyle.gray)
+
+        async def callback(self, interaction: discord.Interaction):
+            await interaction.response.send_message(content='キャンセルしました。', ephemeral=True)
+            self.view.stop()
+
+
+class NoticeSettingResetView(ui.LayoutView):
+    row = ui.ActionRow()
+
+    def __init__(self, db):
+        super().__init__()
+
+        container = ui.Container(
+            ui.TextDisplay(content="## 本当に削除しますか"),
+            ui.TextDisplay(content='この操作はこのサーバーの通知設定を初期化します。元に戻せません。'),
+            accent_color=Colour.red(),
+        )
+        self.row.add_item(NoticeSettingResetButton.Excute(db=db))
+        self.row.add_item(NoticeSettingResetButton.Cancel())
+        self.add_item(container)
+        self.remove_item(self.row)
+        self.add_item(self.row)
 
 
 async def setup(bot):

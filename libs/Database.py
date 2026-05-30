@@ -219,6 +219,14 @@ class ProductionDatabase:
         new = await self.get_notice_role_setting(guild_id)
         return new
 
+    @check_connection
+    async def reset_notice_setting(self, guild_id: int):
+        await self.execute(f'DELETE FROM notice_setting WHERE guild_id = {guild_id}')
+        await self.execute(f'DELETE FROM notice_type_setting WHERE guild_id = {guild_id}')
+        await self.execute(f'DELETE FROM notice_channel_type_setting WHERE guild_id = {guild_id}')
+        await self.execute(f'DELETE FROM notice_role_setting WHERE guild_id = {guild_id}')
+        await self.execute(f'DELETE FROM notice_function_bool WHERE guild_id = {guild_id}')
+
 
 class DebugDatabase(ProductionDatabase):
     def __init__(self):
