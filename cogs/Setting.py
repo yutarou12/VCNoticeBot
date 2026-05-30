@@ -68,10 +68,6 @@ class NoticeFunctionBoolButton(ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         # 機能の有効化/無効化切替処理
-        data = await self.db.get_notice_channel_type(interaction.guild.id)
-        if not data:
-            # 通知先チャンネル設定が未設定の場合、デフォルト値を設定
-            await self.db.set_notice_channel_type(interaction.guild.id, 'vc_text')
         new = await self.db.toggle_notice_function(interaction.guild.id)
         view = SettingView(new, self.db)
         await interaction.response.edit_message(view=view)
@@ -129,8 +125,8 @@ class NoticeChannelTypeSelect(ui.Select):
     def __init__(self, data, db):
         self.db = db
         options = [
-            SelectOption(label='一つのチャンネル', description='通知のメッセージを一つのチャンネルに送信します', value='single', default=True if data and data.get('channel_type') == 'single' else False),
-            SelectOption(label='各VCのテキストチャット', description='通知のメッセージを各VCのテキストチャットに送信します', value='vc_text', default=True if data and data.get('channel_type') == 'vc_text' else False),
+            SelectOption(label='一つのチャンネル', description='通知のメッセージを一つのチャンネルに送信します', value='single', default=True if data else False),
+            SelectOption(label='各VCのテキストチャット', description='通知のメッセージを各VCのテキストチャットに送信します', value='vc_text', default=True if not data else False),
         ]
         super().__init__(placeholder='通知先を選択してください。', min_values=1, max_values=1, options=options)
 
@@ -155,9 +151,8 @@ class NoticeChannelSelect(ui.ChannelSelect):
             custom_id='notice_single_channel_select',
             min_values=1,
             max_values=1,
-            disabled=False if data and data.get('channel_type') == 'single' else True,
-            default_values=[Object(data.get('single_channel_id'))] if data and data.get(
-                'channel_type') == 'single' and data.get('single_channel_id') else None,
+            disabled=False if data else True,
+            default_values=[Object(data.get('single_channel_id'))] if data and data.get('single_channel_id') else None,
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -275,17 +270,17 @@ class NoticeRoleBoolButton(ui.Button):
     def __init__(self, data, db):
         self.db = db
         super().__init__(
-            style=discord.ButtonStyle.green if data and data.get('notice_role') else discord.ButtonStyle.gray,
-            label="有効" if data and data.get('notice_role') else "無効"
+            style=discord.ButtonStyle.green if data else discord.ButtonStyle.gray,
+            label="有効" if data else "無効"
         )
 
     async def callback(self, interaction: discord.Interaction):
         data = await self.db.get_notice_role_setting(interaction.guild.id)
 
         if not data:
-            await self.db.set_notice_role_bool(interaction.guild.id, True)
+            await self.db.toggle_notice_role_bool(interaction.guild.id, False)
         else:
-            await self.db.set_notice_role_bool(interaction.guild.id, False if data and data.get('notice_role') else True)
+            await self.db.toggle_notice_role_bool(interaction.guild.id, True)
 
         data = await self.db.get_notice_role_setting(interaction.guild.id)
         view = NoticeRoleView(data, self.db)
@@ -300,7 +295,7 @@ class NoticeRoleTypeSelect(ui.RoleSelect):
             custom_id='notice_role_select',
             min_values=1,
             max_values=1,
-            disabled=False if data and data.get('notice_role') else True,
+            disabled=False if data else True,
             default_values=[Object(data.get('notice_role_id'))] if data and data.get('notice_role_id') else None,
         )
 
