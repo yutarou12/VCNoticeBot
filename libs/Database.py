@@ -91,148 +91,158 @@ class ProductionDatabase:
         await self.execute(f'UPDATE notice_setting SET notice_vc = {notice_vc} WHERE guild_id = {guild_id}')
 
     @check_connection
-    async def get_notice_function(self, guild_id: int):
-        data = await self.fetch(f'SELECT * FROM notice_function_bool WHERE guild_id = {guild_id}')
-        if not data:
-            return None
-        return data[0]
-
-    @check_connection
-    async def toggle_notice_function(self, guild_id: int):
-        data = await self.get_notice_function(guild_id)
-        if data is None:
-            await self.execute(f'INSERT INTO notice_function_bool (guild_id) VALUES ({guild_id})')
+    async def get_notice_function(self, guild_id: int) -> bool:
+        """本機能の有効無効を取得する関数"""
+        async with self.pool.acquire() as con:
+            data = await con.fetch('SELECT * FROM notice_function_bool WHERE guild_id = $1', guild_id)
+            if not data:
+                return False
             return True
-        else:
-            await self.execute(f'DELETE FROM notice_function_bool WHERE guild_id = {guild_id}')
-            return False
 
     @check_connection
-    async def get_notice_join_bool(self, guild_id: int):
+    async def toggle_notice_function(self, guild_id: int) -> bool:
+        """機能全体のオン/オフを切り替える関数"""
+        data = await self.get_notice_function(guild_id)
         async with self.pool.acquire() as con:
-            data = await con.fetch('SELECT notice_join FROM notice_type_setting WHERE guild_id = $1', guild_id)
             if not data:
-                return None
-            return data[0].get('notice_join')
+                await con.execute(f'INSERT INTO notice_function_bool (guild_id) VALUES ($1)', guild_id)
+                return True
+            else:
+                await con.execute(f'DELETE FROM notice_function_bool WHERE guild_id = $1', guild_id)
+                return False
 
     @check_connection
-    async def get_notice_leave_bool(self, guild_id: int):
+    async def get_notice_join_bool(self, guild_id: int) -> bool:
+        """入室時の通知の有効/無効を取得する関数"""
         async with self.pool.acquire() as con:
-            data = await con.fetch('SELECT notice_leave FROM notice_type_setting WHERE guild_id = $1', guild_id)
+            data = await con.fetch('SELECT * FROM notice_join_bool WHERE guild_id = $1', guild_id)
             if not data:
-                return None
-            return data[0].get('notice_leave')
+                return False
+            return True
 
     @check_connection
-    async def get_all_notice_type_setting(self, guild_id: int):
+    async def get_notice_leave_bool(self, guild_id: int) -> bool:
+        """退室時の通知の有効/無効を取得する関数"""
+        async with self.pool.acquire() as con:
+            data = await con.fetch('SELECT * FROM notice_leave_bool WHERE guild_id = $1', guild_id)
+            if not data:
+                return False
+            return True
+
+    @check_connection
+    async def get_all_notice_type_setting(self, guild_id: int) -> dict[str, bool]:
+        """入室時と退室時のデータをまとめて取得"""
         l_data = await self.get_notice_leave_bool(guild_id)
         j_data = await self.get_notice_join_bool(guild_id)
         data = {
-            "notice_join": j_data if j_data else None,
-            "notice_leave": l_data if l_data else None
+            "notice_join": j_data,
+            "notice_leave": l_data
         }
         return data
 
     @check_connection
-    async def toggle_notice_type_join(self, guild_id: int):
+    async def toggle_notice_type_join(self, guild_id: int) -> dict[str, bool]:
+        """入室時の通知の機能の有効無効を交互に変更する関数"""
         data = await self.get_notice_join_bool(guild_id)
-        if data is None:
-            await self.execute(f'INSERT INTO notice_type_setting (guild_id, notice_join, notice_leave) VALUES ({guild_id}, TRUE, FALSE)')
-        else:
-            new_value = not data
-            await self.execute(f'UPDATE notice_type_setting SET notice_join = {new_value} WHERE guild_id = {guild_id}')
+        async with self.pool.acquire() as con:
+            if not data:
+                await con.execute(f'INSERT INTO notice_join_bool (guild_id) VALUES ($1)', guild_id)
+            else:
+                await con.execute(f'DELETE FROM notice_join_bool WHERE guild_id = $1', guild_id)
 
-        new_data = await self.get_all_notice_type_setting(guild_id)
-        return new_data
+            new_data = await self.get_all_notice_type_setting(guild_id)
+            return new_data
 
     @check_connection
-    async def toggle_notice_type_leave(self, guild_id: int):
+    async def toggle_notice_type_leave(self, guild_id: int) -> dict[str, bool]:
+        """退室時の通知の機能の有効無効を交互に変更する関数"""
         data = await self.get_notice_leave_bool(guild_id)
-        if data is None:
-            await self.execute(f'INSERT INTO notice_type_setting (guild_id, notice_join, notice_leave) VALUES ({guild_id}, FALSE, TRUE)')
-        else:
-            new_value = not data
-            await self.execute(f'UPDATE notice_type_setting SET notice_leave = {new_value} WHERE guild_id = {guild_id}')
+        async with self.pool.acquire() as con:
+            if not data:
+                await con.execute(f'INSERT INTO notice_leave_bool (guild_id) VALUES ($1)', guild_id)
+            else:
+                await con.execute(f'DELETE FROM notice_leave_bool WHERE guild_id = $1', guild_id)
 
-        new_data = await self.get_all_notice_type_setting(guild_id)
-        return new_data
+            new_data = await self.get_all_notice_type_setting(guild_id)
+            return new_data
 
     @check_connection
     async def get_notice_channel_type(self, guild_id: int):
-        data = await self.fetch(f'SELECT * FROM notice_channel_type_setting WHERE guild_id = {guild_id}')
-        if not data:
-            return None
-        return data[0]
+        """送信するチャンネルの種類を取得する関数"""
+        async with self.pool.acquire() as con:
+            data = await con.fetch(f'SELECT * FROM notice_channel_type_setting WHERE guild_id = $1', guild_id)
+            if not data:
+                return None
+            return data[0]
 
     @check_connection
     async def set_notice_channel_type(self, guild_id: int, channel_type: str):
+        """送信するチャンネルの種類を設定する関数"""
         data = await self.get_notice_channel_type(guild_id)
-        if data is None:
-            if channel_type == 'single':
-                await self.execute(f'INSERT INTO notice_channel_type_setting (guild_id, channel_type, single_channel_id) VALUES ({guild_id}, \'{channel_type}\', {0})')
+        async with self.pool.acquire() as con:
+            if data is None:
+                if channel_type == 'single':
+                    await con.execute(f'INSERT INTO notice_channel_type_setting (guild_id, single_channel_id) VALUES ($1, $2)', guild_id, 0)
             else:
-                await self.execute(f'INSERT INTO notice_channel_type_setting (guild_id, channel_type) VALUES ({guild_id}, \'{channel_type}\')')
-        else:
-            if channel_type == 'single':
-                await self.execute(f'UPDATE notice_channel_type_setting SET channel_type = \'{channel_type}\' WHERE guild_id = {guild_id}')
-            else:
-                await self.execute(f'UPDATE notice_channel_type_setting SET channel_type = \'{channel_type}\' WHERE guild_id = {guild_id}')
-        new = await self.get_notice_channel_type(guild_id)
-        return new
+                if channel_type == 'vc_text':
+                    await con.execute('DELETE FROM notice_channel_type_setting WHERE guild_id = $1', guild_id)
+            new = await self.get_notice_channel_type(guild_id)
+            return new
 
     @check_connection
     async def set_notice_single_channel(self, guild_id: int, single_channel_id: int):
+        """特定のチャンネルに通知する場合のチャンネルIDを保存する関数"""
         data = await self.get_notice_channel_type(guild_id)
-        if data is None:
-            await self.execute(f'INSERT INTO notice_channel_type_setting (guild_id, channel_type, single_channel_id) VALUES ({guild_id}, \'single\', {single_channel_id})')
-        else:
-            await self.execute(f'UPDATE notice_channel_type_setting SET single_channel_id = {single_channel_id} WHERE guild_id = {guild_id}')
-        new = await self.get_notice_channel_type(guild_id)
-        return new
+        async with self.pool.acquire() as con:
+            if data is None:
+                await con.execute(f'INSERT INTO notice_channel_type_setting (guild_id, single_channel_id) VALUES ($1, $2)', guild_id, single_channel_id)
+            else:
+                await con.execute(f'UPDATE notice_channel_type_setting SET single_channel_id = $1 WHERE guild_id = $2', single_channel_id, guild_id)
+            new = await self.get_notice_channel_type(guild_id)
+            return new
 
     @check_connection
     async def get_notice_role_setting(self, guild_id: int):
-        data = await self.fetch(f'SELECT * FROM notice_role_setting WHERE guild_id = {guild_id}')
-        if not data:
-            return None
-        return data[0]
-
-    @check_connection
-    async def get_notice_role_bool(self, guild_id: int):
-        data = await self.fetch(f'SELECT * FROM notice_role_setting WHERE guild_id = {guild_id}')
-        if not data:
-            return None
-        return data[0].get('notice_role')
+        """ロールのメンションの機能の有効/無効を取得する関数"""
+        async with self.pool.acquire() as con:
+            data = await con.fetch(f'SELECT * FROM notice_role_setting WHERE guild_id = {guild_id}')
+            if not data:
+                return None
+            return data[0]
 
     @check_connection
     async def set_notice_role_setting(self, guild_id: int, role_id: int):
+        """ロールのIDを設定する関数"""
         data = await self.get_notice_role_setting(guild_id)
-        if data is None:
-            await self.execute(f'INSERT INTO notice_role_setting (guild_id, notice_role, notice_role_id) VALUES ({guild_id}, {False}, {role_id})')
-        else:
-            await self.execute(f'UPDATE notice_role_setting SET notice_role_id = {role_id} WHERE guild_id = {guild_id}')
+        async with self.pool.acquire() as con:
+            if data is None:
+                await con.execute(f'INSERT INTO notice_role_setting (guild_id, notice_role_id) VALUES ($1, $2)', guild_id, role_id)
+            else:
+                await con.execute(f'UPDATE notice_role_setting SET notice_role_id = $1 WHERE guild_id = $2', role_id, guild_id)
 
-        new = await self.get_notice_role_setting(guild_id)
-        return new
+            new = await self.get_notice_role_setting(guild_id)
+            return new
 
     @check_connection
-    async def set_notice_role_bool(self, guild_id: int, role_bool: bool):
-        data = await self.get_notice_role_setting(guild_id)
-        if data is None:
-            await self.execute(f'INSERT INTO notice_role_setting (guild_id, notice_role, notice_role_id) VALUES ({guild_id}, {role_bool}, {0})')
-        else:
-            await self.execute(f'UPDATE notice_role_setting SET notice_role = {role_bool} WHERE guild_id = {guild_id}')
+    async def toggle_notice_role_bool(self, guild_id: int, data_bool: bool):
+        """ロールのメンションの有効/無効を切り替える関数"""
+        async with self.pool.acquire() as con:
+            if data_bool:
+                await con.execute('DELETE FROM notice_role_setting WHERE guild_id = $1', guild_id)
+            else:
+                await con.execute('INSERT INTO notice_role_setting (guild_id, notice_role_id) VALUES ($1, $2)', guild_id, 0)
 
-        new = await self.get_notice_role_setting(guild_id)
-        return new
+            new = await self.get_notice_role_setting(guild_id)
+            return new
 
     @check_connection
     async def reset_notice_setting(self, guild_id: int):
-        await self.execute(f'DELETE FROM notice_setting WHERE guild_id = {guild_id}')
-        await self.execute(f'DELETE FROM notice_type_setting WHERE guild_id = {guild_id}')
-        await self.execute(f'DELETE FROM notice_channel_type_setting WHERE guild_id = {guild_id}')
-        await self.execute(f'DELETE FROM notice_role_setting WHERE guild_id = {guild_id}')
-        await self.execute(f'DELETE FROM notice_function_bool WHERE guild_id = {guild_id}')
+        async with self.pool.acquire() as con:
+            await con.execute(f'DELETE FROM notice_function_bool WHERE guild_id = {guild_id}')
+            await con.execute(f'DELETE FROM notice_join_bool WHERE guild_id = {guild_id}')
+            await con.execute(f'DELETE FROM notice_leave_bool WHERE guild_id = {guild_id}')
+            await con.execute(f'DELETE FROM notice_channel_type_setting WHERE guild_id = {guild_id}')
+            await con.execute(f'DELETE FROM notice_role_setting WHERE guild_id = {guild_id}')
 
 
 class DebugDatabase(ProductionDatabase):
