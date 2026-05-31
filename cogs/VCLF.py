@@ -21,21 +21,25 @@ class VCLF(commands.Cog):
         if not await self.db.get_notice_function(member.guild.id):
             return None
 
+        # 除外チャンネルの取得
+        guild_channel_exclusion_vc_data = await self.db.get_notice_exclusion_vc(member.guild.id)
+
         # 送信チャンネルの種類の取得
         guild_channel_type_data = await self.db.get_notice_channel_type(member.guild.id)
 
-        # 休止チャンネルの取得
-        if member.guild.afk_channel and member.guild.afk_channel == after.channel:
-            return None
-
         # VC入室時
         if after.channel is not None and before.channel is None:
+            # 機能無効時通知しない
+            join_bool = await self.db.get_notice_join_bool(member.guild.id)
+            if not join_bool:
+                return None
+
             # 休止チャンネルに入室の場合通知しない
             if member.guild.afk_channel and member.guild.afk_channel == after.channel:
                 return None
 
-            join_bool = await self.db.get_notice_join_bool(member.guild.id)
-            if not join_bool:
+            # 除外チャンネルに入室の場合通知しない
+            if after.channel.id in guild_channel_exclusion_vc_data:
                 return None
 
             if not guild_channel_type_data:
@@ -46,6 +50,7 @@ class VCLF(commands.Cog):
                     return None
                 ch = member.guild.get_channel(vc_notice_id)
 
+            # 通知先チャンネルが見つからない場合通知しない
             if not ch:
                 return None
 
@@ -64,12 +69,17 @@ class VCLF(commands.Cog):
 
         # VC退出時
         elif before.channel is not None and after.channel is None:
+            # 機能無効時通知しない
+            leave_bool = await self.db.get_notice_leave_bool(member.guild.id)
+            if not leave_bool:
+                return None
+
             # 休止チャンネルから退室の場合通知しない
             if member.guild.afk_channel and member.guild.afk_channel == before.channel:
                 return None
 
-            leave_bool = await self.db.get_notice_leave_bool(member.guild.id)
-            if not leave_bool:
+            # 除外チャンネルから退室の場合通知しない
+            if before.channel.id in guild_channel_exclusion_vc_data:
                 return None
 
             if not guild_channel_type_data:
@@ -80,6 +90,7 @@ class VCLF(commands.Cog):
                     return None
                 ch = member.guild.get_channel(vc_notice_id)
 
+            # 通知先チャンネルが見つからない場合通知しない
             if not ch:
                 return None
 
