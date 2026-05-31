@@ -50,6 +50,10 @@ class SettingView(ui.LayoutView):
                 ui.TextDisplay(content='➍ メンションするロールの設定'),
                 accessory=NoticeRoleSetButton(db)
             ),
+            ui.Section(
+              ui.TextDisplay(content='➎ 除外するVCの設定'),
+                accessory=NoticeExclusionSetButton(db)
+            ),
             ui.Separator(),
             ui.Section(
                 ui.TextDisplay(content='⚠️ 設定の初期化'),
@@ -307,7 +311,76 @@ class NoticeRoleTypeSelect(ui.RoleSelect):
         view = NoticeRoleView(data, self.db)
         await interaction.response.edit_message(view=view)
 
+# -- 除外するVCの設定 START --
 
+class NoticeExclusionSetButton(ui.Button):
+    def __init__(self, db):
+        self.db = db
+        super().__init__(label='⑤', style=ButtonStyle.primary)
+
+    async def callback(self, interaction: discord.Interaction):
+        data = await self.db.get_notice_exclusion_vc(interaction.guild.id)
+        view = NoticeExclusionView(data, self.db)
+        await interaction.response.edit_message(view=view)
+
+
+class NoticeExclusionView(ui.LayoutView):
+    row = ui.ActionRow()
+    row.add_item(BackToSettingButton())
+
+    def __init__(self, data, db):
+        super().__init__()
+
+        container = ui.Container(
+            ui.TextDisplay(content="# 除外するVCの設定"),
+            ui.TextDisplay(content='### 通知を除外するVCを設定します。'),
+            ui.Separator(),
+            ui.TextDisplay(content=f'以下のセレクトメニューから除外するVCを選択してください。\n現状設定できるのは最大25件です。'),
+            NoticeExclusionActionRow(NoticeExclusionSelect(data, db)),
+            ui.TextDisplay(content='※除外するVCに設定したVCでの入退出は通知されなくなります。'),
+            accent_color=Colour.green(),
+        )
+        self.add_item(container)
+        self.remove_item(self.row)
+        self.add_item(self.row)
+
+
+class NoticeExclusionActionRow(ui.ActionRow):
+    def __init__(self, select):
+        super().__init__()
+        self.add_item(select)
+
+class NoticeExclusionSelect(ui.ChannelSelect):
+    def __init__(self, data, db):
+        self.db = db
+        self.data: list[int] = data
+        super().__init__(
+            placeholder='通知を除外するVCを選択してください。',
+            channel_types=[discord.ChannelType.voice],
+            custom_id='notice_exclusion_vc_select',
+            min_values=0,
+            max_values=25,
+            default_values=[Object(vc_id) for vc_id in data] if data else None,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        old_data = self.data or []
+        selected_vcs = self.values
+        selected_vc_ids = [vc.id for vc in selected_vcs]
+
+        append_ids = set(selected_vc_ids) - set(old_data)
+        remove_ids = set(old_data) - set(selected_vc_ids)
+
+        await self.db.set_notice_exclusion_vc(interaction.guild.id, append_ids)
+        await self.db.remove_notice_exclusion_vc(remove_ids)
+
+        data = await self.db.get_notice_exclusion_vc(interaction.guild.id)
+        view = NoticeExclusionView(data, self.db)
+        await interaction.response.edit_message(view=view)
+
+# -- 除外するVCの設定 END --
+
+# -- 初期化ボタン START --
 class NoticeSettingResetButtonOnView(ui.Button):
     def __init__(self, db):
         self.db = db
@@ -359,7 +432,7 @@ class NoticeSettingResetView(ui.LayoutView):
         self.add_item(container)
         self.remove_item(self.row)
         self.add_item(self.row)
-
+# -- 初期化ボタン END --
 
 async def setup(bot):
     await bot.add_cog(Setting(bot))
