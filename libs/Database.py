@@ -31,7 +31,12 @@ class ProductionDatabase:
             )
             # メンションするロールの設定 | テーブルが存在しない：機能オフ
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notice_role_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_role_id bigint)")
+                "CREATE TABLE IF NOT EXISTS notice_role_setting (guild_id bigint NOT NULL PRIMARY KEY, notice_role_id bigint)"
+            )
+            # 除外するVCの設定
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS notice_exclusion_vc_setting (guild_id bigint NOT NULL, exclusion_vc_id bigint NOT NULL, PRIMARY KEY (exclusion_vc_id))"
+            )
 
         return self.pool
 
@@ -207,7 +212,30 @@ class ProductionDatabase:
             await con.execute(f'DELETE FROM notice_leave_bool WHERE guild_id = {guild_id}')
             await con.execute(f'DELETE FROM notice_channel_type_setting WHERE guild_id = {guild_id}')
             await con.execute(f'DELETE FROM notice_role_setting WHERE guild_id = {guild_id}')
+            await con.execute('DELETE FROM notice_exclusion_vc_setting WHERE guild_id = $1', guild_id)
 
+    @check_connection
+    async def get_notice_exclusion_vc(self, guild_id: int) -> list[int]:
+        """除外するチャンネルのIDを取得する関数"""
+        async with self.pool.acquire() as con:
+            data = await con.fetch('SELECT exclusion_vc_id FROM notice_exclusion_vc_setting WHERE guild_id = $1', guild_id)
+            if not data:
+                return []
+            return [record.get('exclusion_vc_id') for record in data]
+
+    @check_connection
+    async def set_notice_exclusion_vc(self, guild_id: int, append_exclusion_vc_ids: set[int]):
+        """除外するチャンネルを設定する関数"""
+        async with self.pool.acquire() as con:
+            for exclusion_vc_id in append_exclusion_vc_ids:
+                await con.execute('INSERT INTO notice_exclusion_vc_setting (guild_id, exclusion_vc_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', guild_id, exclusion_vc_id)
+
+    @check_connection
+    async def remove_notice_exclusion_vc(self, remove_exclusion_vc_ids: set[int]):
+        """除外するチャンネルを削除する関数"""
+        async with self.pool.acquire() as con:
+            for remove_exclusion_vc_id in remove_exclusion_vc_ids:
+                await con.execute('DELETE FROM notice_exclusion_vc_setting WHERE exclusion_vc_id = $1', remove_exclusion_vc_id)
 
 class DebugDatabase(ProductionDatabase):
     def __init__(self):
