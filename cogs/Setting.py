@@ -1,6 +1,5 @@
 import discord
 from discord import app_commands, ui, Colour, ButtonStyle, SelectOption, Object
-from discord.ui import View
 from discord.ext import commands
 
 
