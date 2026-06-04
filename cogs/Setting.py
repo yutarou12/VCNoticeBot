@@ -54,7 +54,7 @@ class SettingView(ui.LayoutView):
             ),
             ui.Section(
                 ui.TextDisplay(content='➎ 除外するVCの設定'),
-                    accessory=NoticeExclusionSetButton(db)
+                accessory=NoticeExclusionSetButton(db)
             ),
             ui.Separator(),
             ui.Section(
