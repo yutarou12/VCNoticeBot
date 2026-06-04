@@ -237,6 +237,7 @@ class ProductionDatabase:
             for remove_exclusion_vc_id in remove_exclusion_vc_ids:
                 await con.execute('DELETE FROM notice_exclusion_vc_setting WHERE exclusion_vc_id = $1', remove_exclusion_vc_id)
 
+
 class DebugDatabase(ProductionDatabase):
     def __init__(self):
         super().__init__()
@@ -251,7 +252,7 @@ class DebugDatabase(ProductionDatabase):
         pass
 
 
-if env.DEBUG is True:
+if env.DEBUG:
     Database = DebugDatabase
 else:
     Database = ProductionDatabase

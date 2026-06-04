@@ -53,8 +53,8 @@ class SettingView(ui.LayoutView):
                 accessory=NoticeRoleSetButton(db)
             ),
             ui.Section(
-              ui.TextDisplay(content='➎ 除外するVCの設定'),
-                accessory=NoticeExclusionSetButton(db)
+                ui.TextDisplay(content='➎ 除外するVCの設定'),
+                    accessory=NoticeExclusionSetButton(db)
             ),
             ui.Separator(),
             ui.Section(
@@ -103,7 +103,7 @@ class NoticeChannelView(ui.LayoutView):
             ui.TextDisplay(content="# 通知先チャンネル設定"),
             ui.TextDisplay(content='### 通知先チャンネルを設定します。'),
             ui.Separator(),
-            ui.TextDisplay(content=f'通知チャンネル'),
+            ui.TextDisplay(content='通知チャンネル'),
             ui.TextDisplay(
                 content='※各VCのテキストチャットを選択した場合、Botが各VCのテキストチャットを閲覧できる必要があります。'
             ),
@@ -249,10 +249,10 @@ class NoticeRoleView(ui.LayoutView):
             ui.TextDisplay(content="# 通知ロール設定"),
             ui.TextDisplay(content='### メンションするロールを設定します。'),
             ui.Separator(),
-            ui.TextDisplay(content=f'設定の有効/無効'),
+            ui.TextDisplay(content='設定の有効/無効'),
             NoticeRoleBoolActionRow(NoticeRoleBoolButton(data, db)),
             ui.Separator(),
-            ui.TextDisplay(content=f'通知ロール'),
+            ui.TextDisplay(content='通知ロール'),
             NoticeRoleActionRow(NoticeRoleTypeSelect(data, db)),
             accent_color=Colour.green(),
         )
@@ -265,6 +265,7 @@ class NoticeRoleActionRow(ui.ActionRow):
     def __init__(self, select):
         super().__init__()
         self.add_item(select)
+
 
 class NoticeRoleBoolActionRow(ui.ActionRow):
     def __init__(self, button):
@@ -313,8 +314,8 @@ class NoticeRoleTypeSelect(ui.RoleSelect):
         view = NoticeRoleView(data, self.db)
         await interaction.response.edit_message(view=view)
 
-# -- 除外するVCの設定 START --
 
+# -- 除外するVCの設定 START --
 class NoticeExclusionSetButton(ui.Button):
     def __init__(self, db):
         self.db = db
@@ -337,7 +338,7 @@ class NoticeExclusionView(ui.LayoutView):
             ui.TextDisplay(content="# 除外するVCの設定"),
             ui.TextDisplay(content='### 通知を除外するVCを設定します。'),
             ui.Separator(),
-            ui.TextDisplay(content=f'以下のセレクトメニューから除外するVCを選択してください。\n現状設定できるのは最大25件です。'),
+            ui.TextDisplay(content='以下のセレクトメニューから除外するVCを選択してください。\n現状設定できるのは最大25件です。'),
             NoticeExclusionActionRow(NoticeExclusionSelect(data, db)),
             ui.TextDisplay(content='※除外するVCに設定したVCでの入退出は通知されなくなります。'),
             accent_color=Colour.green(),
@@ -351,6 +352,7 @@ class NoticeExclusionActionRow(ui.ActionRow):
     def __init__(self, select):
         super().__init__()
         self.add_item(select)
+
 
 class NoticeExclusionSelect(ui.ChannelSelect):
     def __init__(self, data, db):
@@ -379,8 +381,8 @@ class NoticeExclusionSelect(ui.ChannelSelect):
         data = await self.db.get_notice_exclusion_vc(interaction.guild.id)
         view = NoticeExclusionView(data, self.db)
         await interaction.response.edit_message(view=view)
-
 # -- 除外するVCの設定 END --
+
 
 # -- 初期化ボタン START --
 class NoticeSettingResetButtonOnView(ui.Button):
@@ -391,6 +393,7 @@ class NoticeSettingResetButtonOnView(ui.Button):
     async def callback(self, interaction: discord.Interaction):
         view = NoticeSettingResetView(db=self.db)
         await interaction.response.edit_message(view=view)
+
 
 class NoticeSettingResetButton:
     class Excute(ui.Button):
@@ -403,11 +406,12 @@ class NoticeSettingResetButton:
                 await self.db.reset_notice_setting(interaction.guild.id)
                 await interaction.response.send_message(content='設定を初期化しました。', ephemeral=True)
                 self.view.stop()
-            except Exception as e:
+            except Exception as error:
                 await interaction.response.send_message(
-                    content=f'初期化に失敗しました。\n[公式サーバー](https://discord.gg/k5Feum44gE)までお問い合わせください。',
+                    content='初期化に失敗しました。\n[公式サーバー](https://discord.gg/k5Feum44gE)までお問い合わせください。',
                     ephemeral=True)
                 self.view.stop()
+                raise error
 
     class Cancel(ui.Button):
         def __init__(self):
@@ -435,6 +439,7 @@ class NoticeSettingResetView(ui.LayoutView):
         self.remove_item(self.row)
         self.add_item(self.row)
 # -- 初期化ボタン END --
+
 
 async def setup(bot):
     await bot.add_cog(Setting(bot))
