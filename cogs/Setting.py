@@ -11,9 +11,12 @@ class Setting(commands.Cog):
     @app_commands.command(name='設定')
     async def cmd_setting(self, interaction: discord.Interaction):
         """各種設定を行います。"""
+        await interaction.response.defer(ephemeral=True)
+
         data = await self.bot.db.get_notice_function(interaction.guild.id)
         view = SettingView(data, self.bot.db)
-        return await interaction.response.send_message(view=view, ephemeral=True)
+
+        return await interaction.followup.send(view=view, ephemeral=True)
 
 
 class BackToSettingButton(ui.Button):
