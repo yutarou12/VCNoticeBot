@@ -1,7 +1,7 @@
 [project]
 name = "vcjoinlogbot"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Discord bot that logs voice channel join and leave events to discord channels."
 requires-python = ">=3.12"
 dependencies = [
     "asyncpg>=0.31.0",
